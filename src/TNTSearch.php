@@ -337,6 +337,11 @@ class TNTSearch
         $resultSet = [];
         foreach ($matches as $match) {
             $distance = levenshtein($match['term'], $keyword);
+            $yes = ($distance <= $this->fuzzy_distance)?" ПОДХОДИТ":"";
+            var_dump('Есть в индексе - "' . $match['term'] .
+                '", стиммированное слово- "'.$keyword.
+                '" Дистанция левенштейна - '.$distance.' Установленная дистанция- '.$this->fuzzy_distance.
+                $yes);
             if ($distance <= $this->fuzzy_distance) {
                 $match['distance'] = $distance;
                 $resultSet[]       = $match;
