@@ -321,6 +321,29 @@ class TNTSearch
     }
 
     /**
+     * @param $string
+     * @param $map
+     *
+     * @return string
+     */
+    private function utf8_to_extended_ascii($str, &$map)
+    {
+        // find all multibyte characters (cf. utf-8 encoding specs)
+        $matches = array();
+        if (!preg_match_all('/[\xC0-\xF7][\x80-\xBF]+/', $str, $matches))
+            return $str; // plain ascii string
+
+        // update the encoding map with the characters not already met
+        foreach ($matches[0] as $mbc)
+            if (!isset($map[$mbc]))
+                $map[$mbc] = chr(128 + count($map));
+
+        // finally remap non-ascii characters
+        return strtr($str, $map);
+    }
+
+
+    /**
      * @param $keyword
      *
      * @return array
@@ -335,13 +358,10 @@ class TNTSearch
         $matches = $stmtWord->fetchAll(PDO::FETCH_ASSOC);
 
         $resultSet = [];
+        $charMap = array();
+        $asciiKeyword = $this->utf8_to_extended_ascii($keyword, $charMap);
         foreach ($matches as $match) {
-            $distance = levenshtein($match['term'], $keyword);
-//            $yes = ($distance <= $this->fuzzy_distance)?" ПОДХОДИТ":"";
-//            var_dump('Есть в индексе - "' . $match['term'] .
-//                '", стиммированное слово- "'.$keyword.
-//                '" Дистанция левенштейна - '.$distance.' Установленная дистанция- '.$this->fuzzy_distance.
-//                $yes);
+            $distance = levenshtein($this->utf8_to_extended_ascii($match['term'], $charMap), $asciiKeyword);
             if ($distance <= $this->fuzzy_distance) {
                 $match['distance'] = $distance;
                 $resultSet[]       = $match;
