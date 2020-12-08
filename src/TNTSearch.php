@@ -342,6 +342,7 @@ class TNTSearch
                 '", стиммированное слово- "'.$keyword.
                 '" Дистанция левенштейна - '.$distance.' Установленная дистанция- '.$this->fuzzy_distance.
                 $yes);
+
             if ($distance <= $this->fuzzy_distance) {
                 $match['distance'] = $distance;
                 $resultSet[]       = $match;
