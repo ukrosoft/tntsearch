@@ -360,9 +360,15 @@ class TNTSearch
         $resultSet = [];
         $charMap = array();
         $asciiKeyword = $this->utf8_to_extended_ascii($keyword, $charMap);
+        $wordDistance = is_object($this->fuzzy_distance) ? $this->fuzzy_distance->countSearchAccuracy($keyword) : $this->fuzzy_distance;
         foreach ($matches as $match) {
             $distance = levenshtein($this->utf8_to_extended_ascii($match['term'], $charMap), $asciiKeyword);
-            if ($distance <= $this->fuzzy_distance) {
+//            $yes = ($distance <= $wordDistance)?" ПОДХОДИТ":"";
+//            var_dump('Есть в индексе - "' . $match['term'] .
+//                '", стиммированное слово- "'.$keyword.
+//                '" Дистанция левенштейна - '.$distance.' Установленная дистанция- '.$wordDistance.
+//                $yes);
+            if ($distance <= $wordDistance) {
                 $match['distance'] = $distance;
                 $resultSet[]       = $match;
             }
