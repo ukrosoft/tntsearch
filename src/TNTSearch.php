@@ -321,13 +321,36 @@ class TNTSearch
     }
 
     /**
+     * @param $string
+     * @param $map
+     *
+     * @return string
+     */
+    private function utf8_to_extended_ascii($str, &$map)
+    {
+        // find all multibyte characters (cf. utf-8 encoding specs)
+        $matches = array();
+        if (!preg_match_all('/[\xC0-\xF7][\x80-\xBF]+/', $str, $matches))
+            return $str; // plain ascii string
+
+        // update the encoding map with the characters not already met
+        foreach ($matches[0] as $mbc)
+            if (!isset($map[$mbc]))
+                $map[$mbc] = chr(128 + count($map));
+
+        // finally remap non-ascii characters
+        return strtr($str, $map);
+    }
+
+
+    /**
      * @param $keyword
      *
      * @return array
      */
     public function fuzzySearch($keyword)
     {
-        $prefix         = substr($keyword, 0, $this->fuzzy_prefix_length);
+        $prefix         = mb_substr($keyword, 0, $this->fuzzy_prefix_length);
         $searchWordlist = "SELECT * FROM wordlist WHERE term like :keyword ORDER BY num_hits DESC LIMIT {$this->fuzzy_max_expansions}";
         $stmtWord       = $this->index->prepare($searchWordlist);
         $stmtWord->bindValue(':keyword', mb_strtolower($prefix)."%");
@@ -335,9 +358,17 @@ class TNTSearch
         $matches = $stmtWord->fetchAll(PDO::FETCH_ASSOC);
 
         $resultSet = [];
+        $charMap = array();
+        $asciiKeyword = $this->utf8_to_extended_ascii($keyword, $charMap);
+        $wordDistance = is_object($this->fuzzy_distance) ? $this->fuzzy_distance->countSearchAccuracy($keyword) : $this->fuzzy_distance;
         foreach ($matches as $match) {
-            $distance = levenshtein($match['term'], $keyword);
-            if ($distance <= $this->fuzzy_distance) {
+            $distance = levenshtein($this->utf8_to_extended_ascii($match['term'], $charMap), $asciiKeyword);
+//            $yes = ($distance <= $wordDistance)?" ПОДХОДИТ":"";
+//            var_dump('Есть в индексе - "' . $match['term'] .
+//                '", стиммированное слово- "'.$keyword.
+//                '" Дистанция левенштейна - '.$distance.' Установленная дистанция- '.$wordDistance.
+//                $yes);
+            if ($distance <= $wordDistance) {
                 $match['distance'] = $distance;
                 $resultSet[]       = $match;
             }
